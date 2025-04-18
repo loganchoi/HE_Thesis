@@ -1,0 +1,33 @@
+Research Papers/Links
+1. https://www.researchgate.net/publication/384615345_Leveraging_TenSEAL
+2. https://www.researchgate.net/publication/387047161_Application_of_Homomorphic_Encryption_for_Encrypting_and_Decrypting_Patient_Data_in_Thailand's_Healthcare_System
+3. https://www.researchgate.net/publication/379943279_Secure_Healthcare_Predictive_Modeling_with_Homomorphic_Encryption
+4. https://www.foreseemed.com/blog/machine-learning-in-healthcare
+5. https://pmc.ncbi.nlm.nih.gov/articles/PMC10718098/
+6. https://www.mdpi.com/1424-8220/23/7/3566
+7. https://arxiv.org/abs/2104.03152 
+8. https://eprint.iacr.org/2016/421.pdf
+9. https://eprint.iacr.org/2012/144.pdf
+10. https://arxiv.org/abs/2501.03249
+11. https://it.umd.edu/security-privacy-audit-risk-and-compliance-services-sparcs/topic-week/quantum-computing-how-it-changes-encryption-we-know-it
+12. https://pmc.ncbi.nlm.nih.gov/articles/PMC4677837/
+13. https://pmc.ncbi.nlm.nih.gov/articles/PMC7761157/
+14. https://pmc.ncbi.nlm.nih.gov/articles/PMC8577277/#R49
+15. https://pmc.ncbi.nlm.nih.gov/articles/PMC5266631/
+
+
+Kaggle Datasets
+
+1. https://www.kaggle.com/code/erdemtaha/cancer-prediction-96-5-with-logistic-regression/input 
+2. https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression
+3. https://www.kaggle.com/datasets/kandij/diabetes-dataset
+
+XENA Datasets 
+1. https://xenabrowser.net/datapages/
+2. https://xena.ucsc.edu/
+
+MIMIC Links
+1. https://pmc.ncbi.nlm.nih.gov/articles/PMC10001415/
+2. https://mimic.mit.edu/
+
+
