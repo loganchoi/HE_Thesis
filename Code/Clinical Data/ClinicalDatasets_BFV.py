@@ -3,7 +3,7 @@ import tenseal as ts
 import pandas as pd
 import random
 from time import time
-import numpy as np
+
 # optional
 import numpy as np
 import matplotlib.pyplot as plt
@@ -59,7 +59,7 @@ def diabetes_data():
 
 x_train, y_train, x_test, y_test = diabetes_data()
 
-print("CKKS\n")
+print("BFV\n")
 print("############# Data summary #############")
 print(f"x_train has shape: {x_train.shape}")
 print(f"y_train has shape: {y_train.shape}")
@@ -67,18 +67,13 @@ print(f"x_test has shape: {x_test.shape}")
 print(f"y_test has shape: {y_test.shape}")
 print("#######################################\n")
 
-#############################
-# Plain Logistic Regression
 class LR(torch.nn.Module):
-
     def __init__(self, n_features):
         super(LR, self).__init__()
         self.lr = torch.nn.Linear(n_features, 1)
-        
+
     def forward(self, x):
-        out = torch.sigmoid(self.lr(x))
-        return out
-    
+        return torch.sigmoid(self.lr(x))
 
 n_features = x_train.shape[1]
 model = LR(n_features)
@@ -87,93 +82,90 @@ criterion = torch.nn.BCELoss()
 EPOCHS = 5
 
 def train(model, optim, criterion, x, y, epochs=EPOCHS):
-    for e in range(1, epochs + 1):
+    for e in range(epochs):
         optim.zero_grad()
         out = model(x)
         loss = criterion(out, y)
         loss.backward()
         optim.step()
-        #print(f"Loss at epoch {e}: {loss.data}")
+        print(f"Loss at epoch {e}: {loss.data}")
     return model
 
+
 model = train(model, optim, criterion, x_train, y_train)
+
 print("\n")
 
 def accuracy(model, x, y):
-    out = model(x)
-    correct = torch.abs(y - out) < 0.5
+    preds = model(x)
+    correct = torch.abs(preds - y) < 0.5
     return correct.float().mean()
 
-plain_accuracy = accuracy(model, x_test, y_test)
-print(f"Accuracy on plain test_set: {plain_accuracy}")
+plain_acc = accuracy(model, x_test, y_test)
+print(f"Plain test accuracy: {plain_acc}")
 
-#############################
-# Encrypted Logistic Regression
-class EncryptedLR:
-    
-    def __init__(self, torch_lr):
-        self.weight = torch_lr.lr.weight.data.tolist()[0]
-        self.bias = torch_lr.lr.bias.data.tolist()
-        
+#####################
+### BFV Version #####
+#####################
+
+# # BFV requires integer inputs, so scale and convert
+SCALING_FACTOR = 100000
+x_test_int = (x_test * SCALING_FACTOR).int()
+
+class EncryptedLR_BFV:
+    def __init__(self, model, scale):
+        self.weight = [int(w * scale) for w in model.lr.weight.data[0]]
+        self.bias = int(model.lr.bias.item() * scale)
+        self.scale = scale
+
     def forward(self, enc_x):
-        enc_out = enc_x.dot(self.weight) + self.bias
-        return enc_out
-    
+        dot = enc_x.dot(self.weight)
+        return dot + self.bias
+
     def __call__(self, *args, **kwargs):
         return self.forward(*args, **kwargs)
-    
-    def encrypt(self, context):
-        self.weight = ts.ckks_vector(context, self.weight)
-        self.bias = ts.ckks_vector(context, self.bias)
-        
-    def decrypt(self, context):
-        self.weight = self.weight.decrypt()
-        self.bias = self.bias.decrypt()
 
-eelr = EncryptedLR(model)
-
-# TenSEAL context
-poly_mod_degree = 8192
-plain_modulus = 786433
+# Setup BFV context
+bfv_poly_mod_degree = 8192
+bfv_plain_modulus = 786433
 coeff_mod_bit_sizes = [30,20,30]
-ctx_eval = ts.context(ts.SCHEME_TYPE.CKKS, poly_mod_degree,plain_modulus, coeff_mod_bit_sizes)
-ctx_eval.global_scale = 2 ** 22
-ctx_eval.generate_galois_keys()
+ctx_bfv = ts.context(ts.SCHEME_TYPE.BFV, bfv_poly_mod_degree, bfv_plain_modulus,coeff_mod_bit_sizes)
+ctx_bfv.generate_galois_keys()
+
+eelr_bfv = EncryptedLR_BFV(model, SCALING_FACTOR)
 
 # Encrypt test set
-t_start = time()
-enc_x_test = [ts.ckks_vector(ctx_eval, x.tolist()) for x in x_test]
-t_end = time()
-print(f"Encryption of the test-set took {int(t_end - t_start)} seconds")
+t_enc_start = time()
+enc_x_test_bfv = [ts.bfv_vector(ctx_bfv, x.tolist()) for x in x_test_int]
+t_enc_end = time()
+print(f"Encryption of the test-set took {int(t_enc_end - t_enc_start)} seconds")
 
-def encrypted_evaluation(model, enc_x_test, y_test):
-    t_start = time()
-    
+def bfv_encrypted_eval(model, enc_x_test, y_test):
     correct = 0
+    t_start = time()
     y_pred_encrypted = []
+
     for enc_x, y in zip(enc_x_test, y_test):
         enc_out = model(enc_x)
-        out = enc_out.decrypt()
-        out = torch.tensor(out)
-        out = torch.sigmoid(out)
+        out = enc_out.decrypt()[0] / SCALING_FACTOR
+        out = 1 / (1 + torch.exp(-torch.tensor(out)))  # Sigmoid on decrypted
         pred = (out >= 0.5).float()
         y_pred_encrypted.append(pred.item())
         if torch.abs(out - y) < 0.5:
             correct += 1
-    
-    t_end = time()
-    print(f"Evaluated test_set of {len(x_test)} entries in {int(t_end - t_start)} seconds")
-    accuracy = correct / len(x_test)
-    print(f"Accuracy: {correct}/{len(x_test)} = {accuracy}")
-    return accuracy, y_pred_encrypted
 
-encrypted_accuracy, y_pred_encrypted = encrypted_evaluation(eelr, enc_x_test, y_test)
-diff_accuracy = plain_accuracy - encrypted_accuracy
+    t_end = time()
+    acc = correct / len(enc_x_test)
+    print(f"Encrypted test-set evaluation took {int(t_end - t_start)} seconds")
+    print(f"Encrypted Accuracy: {acc:.4f}")
+    return acc, y_pred_encrypted
+
+bfv_acc, y_pred_encrypted = bfv_encrypted_eval(eelr_bfv, enc_x_test_bfv, y_test)
+diff_accuracy = plain_acc - bfv_acc
 print(f"Difference between plain and encrypted accuracies: {diff_accuracy}")
 if diff_accuracy < 0:
     print("Oh! We got a better accuracy on the encrypted test-set! The noise was on our side...")
 
-print(eelr.weight)
 #############################
 # Classification Reports
 
