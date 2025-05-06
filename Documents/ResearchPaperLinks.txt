@@ -30,4 +30,8 @@ MIMIC Links
 1. https://pmc.ncbi.nlm.nih.gov/articles/PMC10001415/
 2. https://mimic.mit.edu/
 
+Genomic Papers/Datasets:
+1. https://pmc.ncbi.nlm.nih.gov/articles/PMC10216146/
+2. https://pmc.ncbi.nlm.nih.gov/articles/PMC3404741/
+3. https://pmc.ncbi.nlm.nih.gov/articles/PMC6073096/
 
