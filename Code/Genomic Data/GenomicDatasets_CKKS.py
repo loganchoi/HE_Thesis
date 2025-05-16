@@ -34,7 +34,8 @@ def prostate_cancer_data():
     merged_df = merged_df.drop("_sample_type", axis="columns")
     merged_df = (merged_df - merged_df.mean()) / merged_df.std()
     x = torch.tensor(merged_df.values).float()
-    return split_train_test(x, y)
+    column_names = merged_df.columns.to_list()
+    return split_train_test(x, y) + (column_names,)
 
 def breast_cancer_data():
     print("Breast Cancer")
@@ -53,7 +54,8 @@ def breast_cancer_data():
     merged_df = merged_df.drop("_sample_type", axis="columns")
     merged_df = (merged_df - merged_df.mean()) / merged_df.std()
     x = torch.tensor(merged_df.values).float()
-    return split_train_test(x, y)
+    column_names = merged_df.columns.to_list()
+    return split_train_test(x, y) + (column_names,)
 
 def lung_cancer_data():
     print("Lung Cancer")
@@ -72,9 +74,10 @@ def lung_cancer_data():
     merged_df = merged_df.drop("_sample_type", axis="columns")
     merged_df = (merged_df - merged_df.mean()) / merged_df.std()
     x = torch.tensor(merged_df.values).float()
-    return split_train_test(x, y)
+    column_names = merged_df.columns.to_list()
+    return split_train_test(x, y) + (column_names,)
 
-x_train, y_train, x_test, y_test = lung_cancer_data()
+x_train, y_train, x_test, y_test, column_names = lung_cancer_data()
 
 print("CKKS\n")
 print("############# Data summary #############")
@@ -190,7 +193,17 @@ print(f"Difference between plain and encrypted accuracies: {diff_accuracy}")
 if diff_accuracy < 0:
     print("Oh! We got a better accuracy on the encrypted test-set! The noise was on our side...")
 
-print(eelr.weight)
+print()
+print("Feature Importance CKKS:")
+sorted_features = sorted(zip(column_names, eelr.weight), key=lambda x: abs(x[1]), reverse=True)
+for name, weight in sorted_features:
+    print(f"{name}: {weight:.2f}")
+
+print()
+print("Feature Importance Plain:")
+sorted_features = sorted(zip(column_names, model.lr.weight.data[0]), key=lambda x: abs(x[1]), reverse=True)
+for name, weight in sorted_features:
+    print(f"{name}: {weight:.2f}")
 #############################
 # Classification Reports
 

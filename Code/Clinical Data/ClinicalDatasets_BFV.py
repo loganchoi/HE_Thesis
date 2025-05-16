@@ -28,7 +28,8 @@ def heart_disease_data():
     data = data.drop("TenYearCHD", axis="columns")
     data = (data - data.mean()) / data.std()
     x = torch.tensor(data.values).float()
-    return split_train_test(x, y)
+    column_names = data.columns.to_list()
+    return split_train_test(x, y) + (column_names,)
 
 def breast_cancer_data():
     print("Breast Cancer Data")
@@ -41,7 +42,8 @@ def breast_cancer_data():
     data = data.drop("diagnosis", axis="columns")
     data = (data - data.mean()) / data.std()
     x = torch.tensor(data.values).float()
-    return split_train_test(x, y)
+    column_names = data.columns.to_list()
+    return split_train_test(x, y) + (column_names,)
 
 def diabetes_data():
     print("Diabetes Data")
@@ -54,10 +56,11 @@ def diabetes_data():
     data = data.drop("Outcome", axis="columns")
     data = (data - data.mean()) / data.std()
     x = torch.tensor(data.values).float()
-    return split_train_test(x, y)
+    column_names = data.columns.to_list()
+    return split_train_test(x, y) + (column_names,)
 
 
-x_train, y_train, x_test, y_test = diabetes_data()
+x_train, y_train, x_test, y_test, column_names = diabetes_data()
 
 print("BFV\n")
 print("############# Data summary #############")
@@ -166,7 +169,17 @@ print(f"Difference between plain and encrypted accuracies: {diff_accuracy}")
 if diff_accuracy < 0:
     print("Oh! We got a better accuracy on the encrypted test-set! The noise was on our side...")
 
-#############################
+print()
+print("Feature Importance BFV:")
+sorted_features = sorted(zip(column_names, eelr_bfv.weight), key=lambda x: abs(x[1]), reverse=True)
+for name, weight in sorted_features:
+    print(f"{name}: {weight}")
+
+print()
+print("Feature Importance Plain:")
+sorted_features = sorted(zip(column_names, model.lr.weight.data[0]), key=lambda x: abs(x[1]), reverse=True)
+for name, weight in sorted_features:
+    print(f"{name}: {weight}")
 # Classification Reports
 
 # Plain model predictions
